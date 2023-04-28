@@ -60,6 +60,53 @@ def growth_in_value():
     # Show the plot
     plt.show()
 
+         
+def transfer_over_time():
+    # load the dataset and create year column
+    df = dataframes[6]
+    df['datetime'] = pd.to_datetime(df['datetime'])
+    df['year'] = df['datetime'].dt.year
+
+    # create list of quarters and dataframes for each quarter
+    quarters = [(2003, 2007), (2008, 2012), (2013, 2017), (2018, 2023)]
+    quarter_dfs = []
+    for start_year, end_year in quarters:
+        quarter_dfs.append(df[(df['year'] >= start_year) & (df['year'] <= end_year)])
+    transfer_totals = []
+
+    # calculate total transfer fees for each quarter and convert to billions of euros
+    for dfs in quarter_dfs:
+        total = dfs['market_value_in_eur'].sum(skipna = True)
+        total /= 1000000000
+        transfer_totals.append(total)
+
+    # plot the bar graph for the transfer fees for each quarter
+    positions1 = np.arange(len(quarters))
+    plt.bar(positions1,transfer_totals, width=0.5, color='r')
+    plt.xticks(positions1, ['2003-2007', '2008-2012', '2013-2017', '2018-2023'])
+    plt.xlabel('5 Year Periods')
+    plt.ylabel('Total fees (in billions of euros)')
+    plt.title('Transfer fees in 5 year periods from 2003-2023')
+    plt.show()
+
+    # project future transfer fees using a non-linear regression model
+    # add the projected data to the original data
+    transfer_totals_f = list(transfer_totals)
+    transfer_totals_f.extend([743.78289323, 842.4144779])
+    quarters_f = list(quarters)
+    quarters_f.extend([(2023, 2027), (2028, 2032)])
+
+    # plot the bar graph for the projected transfer fees
+    positions2 = np.arange(len(quarters_f))
+    plt.bar(positions2,transfer_totals_f, width=0.5, color='b')
+    plt.xticks(positions2, ['2003-2007', '2008-2012', '2013-2017', '2018-2023', '2023-2027', '2028-2032'])
+    plt.xlabel('5 Year Periods')
+    plt.ylabel('Total fees (in billions of euros)')
+    plt.title('Transfer fees projections using Non-Linear regression : logistics Model')
+    plt.show()
+
+    
 
 file_func()
 growth_in_value()
+transfer_over_time()
