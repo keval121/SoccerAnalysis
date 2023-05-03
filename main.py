@@ -96,7 +96,78 @@ def value_over_time():
     plt.title('Market Values projections using Non-Linear regression : logistics Model')
     plt.show()
 
-#def value_over_time_by_position():
+def value_over_time_by_position():
+    df = dataframes[6]
+    df['datetime'] = pd.to_datetime(df['datetime'])
+    df['year'] = df['datetime'].dt.year
+    sf = dataframes[7]
+    pos_dict = {}
+    for id in df['player_id'].unique():
+        pos_dict[id] = sf.loc[sf['player_id'] == id, 'position'].values[0]
+    df['position'] = df['player_id'].map(pos_dict)
+
+    quarters = [(2003, 2007), (2008, 2012), (2013, 2017), (2018, 2023)]
+    median_yr = []
+    for start, end in quarters:
+        median_yr.append(int(start + end / 2))
+
+    positions = ['Goalkeeper', 'Defender', 'Midfield', 'Attack']
+    datasets = {}
+
+    for position in positions:
+        datasets[position] = {}
+        i = 0
+        for start_year, end_year in quarters:
+            rows = df[(df['year'] >= start_year) & (df['year'] <= end_year) & (df['position'] == position)]
+            datasets[position][median_yr[i]] = rows
+            i += 1
+
+    datasets_tot = {}
+    for position in positions:
+        datasets_tot[position] = {}
+        total = 0
+        for myr in median_yr:
+            total = datasets[position][myr]['market_value_in_eur'].sum(skipna = True)
+            total /= 100000000
+            datasets_tot[position][myr] = total
+
+    # Set the color for each position
+    colors = {'Goalkeeper': 'green', 'Defender': 'yellow', 'Midfield': 'blue', 'Attack': 'red'}
+
+    # Prepare data for each position
+    data = {}
+    for position in positions:
+        data[position] = [datasets_tot[position][myr] for myr in median_yr]
+
+    # Prepare the x-ticks labels
+    x_ticks = [f"{start}-{end}" for start, end in quarters]
+
+    # Set the width of each bar
+    bar_width = 0.2
+
+    # Prepare the x-ticks positions for each section
+    x_pos = np.arange(len(x_ticks))
+
+    # Plot the graph
+    fig, ax = plt.subplots(figsize=(15, 8))
+    for i, position in enumerate(positions):
+        ax.bar(x_pos + (i - 1.5) * bar_width, data[position], width=bar_width, color=colors[position], label=position)
+
+    # Set the x-ticks and labels
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(x_ticks)
+    ax.set_xlabel('5 year periods')
+
+    # Set the y-label and title
+    ax.set_ylabel('Market value in Billions of Euros')
+    ax.set_title('Market value by position and 5 year periods')
+
+    # Set the legend
+    ax.legend()
+
+    # Show the graph
+    plt.show()
+
 
 def total_goals():
     df = dataframes[5]
@@ -140,10 +211,12 @@ def total_goals():
 file_func()
 growth_in_value()
 value_over_time()
+value_over_time_by_position()
 total_goals()
 
 
 '''
+This function was created before I realized I misinterpreted the data
 def growth_in_value():
     df = dataframes[7]
     # Define a list of league codes
