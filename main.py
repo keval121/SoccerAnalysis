@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+import seaborn as sns
 from operator import itemgetter
 
 dataframes = []
@@ -169,6 +171,7 @@ def value_over_time_by_position():
     plt.show()
 
 
+
 def total_goals():
     df = dataframes[5]
     h_game = df.groupby('home_club_id')
@@ -196,16 +199,76 @@ def total_goals():
     y_data = list(most_goals.values())
 
     # Create the bar chart
-    plt.figure(figsize=(22, 8))
+    plt.figure(figsize=(15, 6))
     plt.bar(x_data, y_data)
 
     # Set the title and axis labels
     plt.title("Top 10 clubs with most goals over the last 10 years")
     plt.xlabel("Club name")
     plt.ylabel("Total goals")
+    plt.xticks(rotation = 90)
 
     # Show the plot
     plt.show()
+
+def top_players_and_stats():
+    df = dataframes[6]
+    af = dataframes[7]
+    df['datetime'] = pd.to_datetime(df['datetime'])
+    df['year'] = df['datetime'].dt.year
+    sf = dataframes[0]
+
+    # Keep only the most recent year for each player
+    df_recent = df.loc[df.groupby('player_id')['year'].idxmax()]
+    # Sort by market value and keep top 10 rows
+    df_cur15 = df_recent.sort_values(by='market_value_in_eur', ascending=False).head(15)
+    # Print the top 10 players
+    names_dict = {}
+    for id in df_cur15['player_id']:
+        row = af[af['player_id'] == id]
+        names_dict[id] = row['name'].values[0]
+    df_cur15['name'] = df_cur15['player_id'].map(names_dict)
+    af_copy = af[af['highest_market_value_in_eur'] == af['highest_market_value_in_eur']].copy()
+    af_copy.sort_values(by='highest_market_value_in_eur', ascending=False, inplace=True)
+    af_top15 = af_copy[0:15]
+
+    # Add total goals and assists columns to df_cur10
+    copy_sf_df = sf[sf['player_id'].isin(df_cur15['player_id'])]
+    copy_sf_df = copy_sf_df.groupby('player_id').agg({'goals': 'sum', 'assists': 'sum'}).reset_index()
+    df_cur15 = pd.merge(df_cur15, copy_sf_df, on='player_id', how='left')
+
+    # Add total goals and assists columns to af_top10
+    copy_sf_af = sf[sf['player_id'].isin(af_top15['player_id'])]
+    copy_sf_af = copy_sf_af.groupby('player_id').agg({'goals': 'sum', 'assists': 'sum'}).reset_index()
+    af_top15 = pd.merge(af_top15, copy_sf_af, on='player_id', how='left')
+
+    fig, axs = plt.subplots(ncols=2, figsize=(15, 6))
+    sns.barplot(x='market_value_in_eur', y='name', data=df_cur15, ax=axs[0])
+    axs[0].set_title('Current Most Valued Players')
+    axs[0].set_xlabel('Market Value (in Millions Euro)')
+    sns.barplot(x='highest_market_value_in_eur', y='name', data=af_top15, ax=axs[1])
+    axs[1].set_title('Most Valued Players of All Time')
+    axs[1].set_xlabel('Market Value (in Millions Euro)')
+    plt.subplots_adjust(wspace=0.5)
+    plt.show()
+
+    fig, axs = plt.subplots(ncols=2, figsize=(25, 7))
+    sns.lineplot(x='name', y='goals', data=df_cur15, ax=axs[0], color='red', label='Goals')
+    sns.lineplot(x='name', y='assists', data=df_cur15, ax=axs[0], color='blue', label='Assists')
+    axs[0].set_title('Goals and Assists - Current Top Value Players')
+    axs[0].set_xlabel('Player Name')
+    axs[0].set_ylabel('Returns')
+    axs[0].tick_params(axis='x', labelrotation=90)
+    sns.lineplot(x='name', y='goals', data=af_top15, ax=axs[1], color='red', label='Goals')
+    sns.lineplot(x='name', y='assists', data=af_top15, ax=axs[1], color='blue', label='Assists')
+    axs[1].set_title('Goals and Assists - Highest Valued Players All Time')
+    axs[1].set_xlabel('Player Name')
+    axs[1].set_ylabel('Returns')
+    axs[1].tick_params(axis='x', labelrotation=90)
+    axs[1].legend()
+    plt.subplots_adjust(wspace=0.5)
+    plt.show()
+
 
 
 file_func()
@@ -213,6 +276,7 @@ growth_in_value()
 value_over_time()
 value_over_time_by_position()
 total_goals()
+top_players_and_stats()
 
 
 '''
