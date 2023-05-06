@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 import seaborn as sns
 from operator import itemgetter
+from datetime import datetime
 
 dataframes = []
 files = ['appearances.csv', 'club_games.csv', 'clubs.csv', 'competitions.csv',
@@ -170,6 +171,56 @@ def value_over_time_by_position():
     # Show the graph
     plt.show()
 
+def player_value_by_age():
+    df = dataframes[7]
+    birth_day = pd.to_datetime(df['date_of_birth'])
+    today = datetime.today()
+    df['age'] = (today - birth_day).dt.total_seconds() / (365.2425 * 24 * 3600)
+    df['age'] = df['age'].fillna(0).astype(int)
+    current = df[df['last_season'] == 2022]
+    retired = df[df['last_season'] < 2022]
+
+    periods = [(16, 20), (21, 25), (26, 30), (31, 35), (36, 100)]
+    age_groups_dfs = []
+    for start, end in periods:
+        agdfs = current[(current['age'] >= start) & (current['age'] <= end)]
+        age_groups_dfs.append(agdfs)
+
+    total_value_by_age = []
+    for agdfs in age_groups_dfs:
+        total = agdfs['market_value_in_eur'].sum(skipna=True) / 1000000000
+        total_value_by_age.append(total)
+
+    retired_years = retired.groupby('last_season')
+    retired_dict = {}
+    for year, data in retired_years:
+        retired_dict[year] = data['market_value_in_eur']
+
+    # flatten the values in retired_dict
+    from matplotlib import ticker
+
+    values = [val for sublist in retired_dict.values() for val in sublist]
+
+    # create a list of corresponding years
+    years = []
+    for year in retired_dict:
+        years += [year] * len(retired_dict[year])
+
+    # create scatter plot with flattened data
+    plt.scatter(years, values, s=100, alpha=0.7)
+    plt.xlabel('Year')
+    plt.ylabel('Market Value at the time of retirement (M€)')
+    plt.ticklabel_format(style='plain', axis='y')
+    plt.gca().get_yaxis().set_major_formatter(ticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+
+    # create a bar plot for total value by age
+    plt.figure(figsize=(10, 6))
+    x_labels = ['Teen (16-20)', 'Young (21-25)', 'Prime (26-30)', 'Veterans (31-35)', 'Old (36+)']
+    sns.barplot(x=x_labels, y=total_value_by_age)
+    plt.xlabel('Age Group')
+    plt.ylabel('Total Market Value (B€)')
+    plt.title('Total Market Value of Active Players by Age Group')
+    plt.show()
 
 
 def total_goals():
@@ -275,6 +326,7 @@ file_func()
 growth_in_value()
 value_over_time()
 value_over_time_by_position()
+player_value_by_age()
 total_goals()
 top_players_and_stats()
 
